@@ -108,16 +108,19 @@ contract StrategyBase is Initializable, Pausable, IStrategy {
          * has already been increased due to the `strategyManager` transferring tokens to this strategy prior to calling this function
          */
         // account for virtual shares and balance
+        // 这里加一个 SHARES_OFFSET 和 BALANCE_OFFSET 是为了防止攻击（精度问题导致的溢出），这是所有质押协议的通用问题，一般会加一个很小的值处理
         uint256 virtualShareAmount = priorTotalShares + SHARES_OFFSET;
         uint256 virtualTokenBalance = _tokenBalance() + BALANCE_OFFSET;
         // calculate the prior virtual balance to account for the tokens that were already transferred to this contract
         uint256 virtualPriorTokenBalance = virtualTokenBalance - amount;
+        // 计算出 shares
         newShares = (amount * virtualShareAmount) / virtualPriorTokenBalance;
 
         // extra check for correctness / against edge case where share rate can be massively inflated as a 'griefing' sort of attack
         require(newShares != 0, "StrategyBase.deposit: newShares cannot be zero");
 
         // update total share amount to account for deposit
+        // 这里计算出的 shares 和你质押的 ETH 数量是一致的
         totalShares = (priorTotalShares + newShares);
         return newShares;
     }

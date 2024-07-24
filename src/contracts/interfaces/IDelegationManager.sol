@@ -17,6 +17,7 @@ import "./ISignatureUtils.sol";
 interface IDelegationManager is ISignatureUtils {
     // @notice Struct used for storing information about a single operator who has registered with EigenLayer
     struct OperatorDetails {
+        // 节点的 url
         /// @notice DEPRECATED -- this field is no longer used, payments are handled in PaymentCoordinator.sol
         address __deprecated_earningsReceiver;
         /**

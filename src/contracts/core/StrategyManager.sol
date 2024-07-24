@@ -20,11 +20,11 @@ import "../libraries/EIP1271SignatureUtils.sol";
  * - enabling deposit of assets into specified strategy(s)
  */
 contract StrategyManager is
-    Initializable,
-    OwnableUpgradeable,
-    ReentrancyGuardUpgradeable,
-    Pausable,
-    StrategyManagerStorage
+Initializable,
+OwnableUpgradeable,
+ReentrancyGuardUpgradeable,
+Pausable,
+StrategyManagerStorage
 {
     using SafeERC20 for IERC20;
 
@@ -106,6 +106,7 @@ contract StrategyManager is
         IERC20 token,
         uint256 amount
     ) external onlyWhenNotPaused(PAUSED_DEPOSITS) nonReentrant returns (uint256 shares) {
+        // 质押的第一步就是 depositInto 到 strategy 合约中
         shares = _depositIntoStrategy(msg.sender, strategy, token, amount);
     }
 
@@ -241,8 +242,8 @@ contract StrategyManager is
      * @param strategiesToRemoveFromWhitelist Strategies that will be removed to the `strategyIsWhitelistedForDeposit` mapping (if they are in it)
      */
     function removeStrategiesFromDepositWhitelist(IStrategy[] calldata strategiesToRemoveFromWhitelist)
-        external
-        onlyStrategyWhitelister
+    external
+    onlyStrategyWhitelister
     {
         uint256 strategiesToRemoveFromWhitelistLength = strategiesToRemoveFromWhitelist.length;
         for (uint256 i = 0; i < strategiesToRemoveFromWhitelistLength;) {
@@ -276,6 +277,7 @@ contract StrategyManager is
         require(staker != address(0), "StrategyManager._addShares: staker cannot be zero address");
         require(shares != 0, "StrategyManager._addShares: shares should not be zero!");
 
+        // 就是在一个 mapping 中 将 staker 和 strategy 进行映射绑定
         // if they dont have existing shares of this strategy, add it to their strats
         if (stakerStrategyShares[staker][strategy] == 0) {
             require(
@@ -305,13 +307,16 @@ contract StrategyManager is
         IStrategy strategy,
         IERC20 token,
         uint256 amount
-    ) internal onlyStrategiesWhitelistedForDeposit(strategy) returns (uint256 shares) {
+    ) internal onlyStrategiesWhitelistedForDeposit(strategy) returns (uint256 shares) { // strategy 合约部署完成后，放到 onlyStrategiesWhitelistedForDeposit 白名单管理
+        // 将 token 转到对应的 strategy 合约中
         // transfer tokens from the sender to the strategy
         token.safeTransferFrom(msg.sender, address(strategy), amount);
 
+        // 调用strategy.deposit() 方法，将 token 转到 strategy 合约中，并返回 shares（实现是 StrategyBase.sol）
         // deposit the assets into the specified strategy and get the equivalent amount of shares in that strategy
         shares = strategy.deposit(token, amount);
 
+        // 把 shares 添加到 staker 地址对应的 strategy 中
         // add the returned shares to the staker's existing shares for this strategy
         _addShares(staker, token, strategy, shares);
 

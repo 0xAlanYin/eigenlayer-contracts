@@ -106,11 +106,12 @@ contract DelegationManager is
      */
     function registerAsOperator(
         OperatorDetails calldata registeringOperatorDetails,
-        string calldata metadataURI
+        string calldata metadataURI // 方便其他节点和我通信的 uri
     ) external {
         require(!isDelegated(msg.sender), "DelegationManager.registerAsOperator: caller is already actively delegated");
         _setOperatorDetails(msg.sender, registeringOperatorDetails);
         SignatureWithExpiry memory emptySignatureAndExpiry;
+        // 相当于我是 operator 的同时把我设置为 staker
         // delegate from the operator to themselves
         _delegate(msg.sender, msg.sender, emptySignatureAndExpiry, bytes32(0));
         // emit events
@@ -507,11 +508,13 @@ contract DelegationManager is
         }
 
         // record the delegation relation between the staker and operator, and emit an event
+        // 将 staker 和 operator 绑定，并发出一个事件
         delegatedTo[staker] = operator;
         emit StakerDelegated(staker, operator);
 
         (IStrategy[] memory strategies, uint256[] memory shares) = getDelegatableShares(staker);
 
+        // 将对应的 shares 转移给 operator
         for (uint256 i = 0; i < strategies.length;) {
             // forgefmt: disable-next-item
             _increaseOperatorShares({
@@ -563,6 +566,7 @@ contract DelegationManager is
         // Remove `withdrawalRoot` from pending roots
         delete pendingWithdrawals[withdrawalRoot];
 
+        // 区分是 rewards 还是 tokens
         if (receiveAsTokens) {
             // Finalize action by converting shares to tokens for each strategy, or
             // by re-awarding shares in each strategy.
@@ -597,6 +601,7 @@ contract DelegationManager is
                  * When awarding podOwnerShares in EigenPodManager, we need to be sure to only give them back to the original podOwner.
                  * Other strategy shares can + will be awarded to the withdrawer.
                  */
+                // 区分是 ETH 还是普通的 Token
                 if (withdrawal.strategies[i] == beaconChainETHStrategy) {
                     address staker = withdrawal.staker;
                     /**
